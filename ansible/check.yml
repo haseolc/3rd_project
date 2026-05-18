@@ -1,0 +1,28 @@
+- name: Check Kubernetes Nodes
+  hosts: k8s
+  become: yes
+
+  tasks:
+    - name: Check hostname
+      command: hostname
+      register: hostname_result
+
+    - name: Print hostname
+      debug:
+        var: hostname_result.stdout
+
+    - name: Check containerd status
+      command: systemctl is-active containerd
+      register: containerd_status
+
+    - name: Print containerd status
+      debug:
+        var: containerd_status.stdout
+
+    - name: Check kubelet status
+      command: systemctl is-active kubelet
+      register: kubelet_status
+
+    - name: Print kubelet status
+      debug:
+        var: kubelet_status.stdout
