@@ -1,0 +1,31 @@
+---
+- name: Install Prometheus and Grafana
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Add prometheus-community helm repo
+      command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      ignore_errors: yes
+
+    - name: Update helm repo
+      command: helm repo update
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Create monitoring namespace
+      command: kubectl create namespace monitoring
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      ignore_errors: yes
+
+    - name: Install kube-prometheus-stack
+      command: >
+        helm upgrade --install monitoring prometheus-community/kube-prometheus-stack
+        --namespace monitoring
+        --set grafana.service.type=NodePort
+        --set prometheus.service.type=NodePort
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config

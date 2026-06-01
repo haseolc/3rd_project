@@ -1,3 +1,25 @@
-*.tfstate
-*.tfstate.*
+# Terraform
 .terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# SSH
+*.pem
+id_rsa
+id_rsa.pub
+
+# Kubernetes
+.kube/
+kubeconfig
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Ansible
+retry_files_enabled
+*.retry

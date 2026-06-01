@@ -9,4 +9,15 @@ terraform {
 
 provider "aws" {
   region = "ap-northeast-2"
+
+  default_tags {
+    tags = {
+      environment = "sandbox"
+      team        = "infra"
+      service     = "shared-network"
+      owner       = "team-leader"
+      auto-stop   = "true"
+      created-by  = "terraform"
+    }
+  }
 }

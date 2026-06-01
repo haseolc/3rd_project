@@ -1,0 +1,37 @@
+- name: Install and configure containerd
+  hosts: k8s
+  become: yes
+
+  tasks:
+    - name: Install containerd
+      apt:
+        name: containerd
+        state: present
+        update_cache: yes
+
+    - name: Create containerd config directory
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd config
+      shell: containerd config default
+      register: containerd_default_config
+      changed_when: false
+
+    - name: Write containerd config
+      copy:
+        dest: /etc/containerd/config.toml
+        content: "{{ containerd_default_config.stdout }}"
+
+    - name: Enable SystemdCgroup
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes

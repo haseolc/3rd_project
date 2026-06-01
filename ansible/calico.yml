@@ -1,0 +1,10 @@
+---
+- name: Install Calico CNI
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Install Calico
+      command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config

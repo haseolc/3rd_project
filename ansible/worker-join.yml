@@ -1,0 +1,27 @@
+---
+- name: Generate Kubernetes join command
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Create join command
+      command: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: Save join command
+      set_fact:
+        kubeadm_join_command: "{{ join_command.stdout }}"
+
+- name: Join worker nodes to cluster
+  hosts: worker
+  become: yes
+
+  tasks:
+    - name: Check if worker already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: worker_joined
+
+    - name: Join worker node
+      command: "{{ hostvars[groups['master'][0]]['kubeadm_join_command'] }}"
+      when: not worker_joined.stat.exists
