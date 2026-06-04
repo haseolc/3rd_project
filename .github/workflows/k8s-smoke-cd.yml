@@ -1,0 +1,65 @@
+name: K8s Smoke CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-smoke-test:
+    name: Deploy Smoke Test to Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check AWS CLI
+        run: |
+          aws --version
+
+      - name: Get current master public IP by EC2 tag
+        run: |
+          MASTER_HOST=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=k8s-master" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].PublicIpAddress" \
+            --output text)
+
+          COUNT=$(echo "$MASTER_HOST" | wc -w)
+
+          if [ "$COUNT" -ne 1 ]; then
+            echo "Expected exactly one running k8s-master instance, but found $COUNT."
+            echo "Found hosts: $MASTER_HOST"
+            exit 1
+          fi
+
+          echo "MASTER_HOST=$MASTER_HOST" >> $GITHUB_ENV
+          echo "Current master host: $MASTER_HOST"
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.MASTER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/k8s-key.pem
+          chmod 600 ~/.ssh/k8s-key.pem
+          ssh-keyscan -H "$MASTER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Copy Kubernetes manifests to master node
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.MASTER_USER }}@$MASTER_HOST "mkdir -p ~/deploy/3rd_project/k8s/smoke-test"
+          scp -i ~/.ssh/k8s-key.pem -r k8s/smoke-test/* ${{ secrets.MASTER_USER }}@$MASTER_HOST:~/deploy/3rd_project/k8s/smoke-test/
+
+      - name: Apply Kubernetes manifests
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.MASTER_USER }}@$MASTER_HOST "
+            kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test &&
+            kubectl rollout status deployment/ci-cd-smoke-app -n ci-cd-test --timeout=120s &&
+            kubectl get pods -n ci-cd-test -o wide &&
+            kubectl get svc -n ci-cd-test
+          "

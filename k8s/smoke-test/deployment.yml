@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-cd-smoke-app
+  namespace: ci-cd-test
+  labels:
+    app: ci-cd-smoke-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ci-cd-smoke-app
+  template:
+    metadata:
+      labels:
+        app: ci-cd-smoke-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
