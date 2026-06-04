@@ -1,0 +1,71 @@
+name: Infra CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - "ansible/**"
+      - ".github/workflows/infra-ci.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - "ansible/**"
+      - ".github/workflows/infra-ci.yml"
+
+jobs:
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init without backend
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+  ansible-syntax-check:
+    name: Ansible Syntax Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ansible
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Check Ansible version
+        run: ansible --version
+
+      - name: Ansible syntax check
+        run: ansible-playbook -i inventory.ini site.yml --syntax-check
