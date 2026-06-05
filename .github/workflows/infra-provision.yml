@@ -1,0 +1,210 @@
+name: Infra Provision
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provision-infra-and-k8s:
+    name: Provision EC2 and Configure Kubernetes
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      TF_STATE_KEY: 3rd_project/terraform.tfstate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init with S3 backend
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${TF_STATE_KEY}" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform format and validate
+        working-directory: terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform validate
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -auto-approve
+
+      - name: Wait for EC2 instances
+        run: |
+          set -e
+
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=k8s-master,k8s-worker-1,k8s-worker-2" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+          echo "Instance IDs: $INSTANCE_IDS"
+
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running Kubernetes EC2 instances found."
+            exit 1
+          fi
+
+          aws ec2 wait instance-status-ok --instance-ids $INSTANCE_IDS
+
+      - name: Get current EC2 public IPs
+        run: |
+          set -e
+
+          get_ip() {
+            NAME=$1
+            IP=$(aws ec2 describe-instances \
+              --filters \
+                "Name=tag:Name,Values=${NAME}" \
+                "Name=instance-state-name,Values=running" \
+              --query "Reservations[].Instances[].PublicIpAddress" \
+              --output text)
+
+            COUNT=$(echo "$IP" | wc -w)
+
+            if [ "$COUNT" -ne 1 ]; then
+              echo "Expected exactly one running ${NAME}, but found ${COUNT}."
+              echo "Found IPs: ${IP}"
+              exit 1
+            fi
+
+            echo "$IP"
+          }
+
+          MASTER_IP=$(get_ip "k8s-master")
+          WORKER1_IP=$(get_ip "k8s-worker-1")
+          WORKER2_IP=$(get_ip "k8s-worker-2")
+
+          echo "MASTER_IP=$MASTER_IP" >> $GITHUB_ENV
+          echo "WORKER1_IP=$WORKER1_IP" >> $GITHUB_ENV
+          echo "WORKER2_IP=$WORKER2_IP" >> $GITHUB_ENV
+
+          echo "Master: $MASTER_IP"
+          echo "Worker-1: $WORKER1_IP"
+          echo "Worker-2: $WORKER2_IP"
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.MASTER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/k8s-key.pem
+          chmod 600 ~/.ssh/k8s-key.pem
+
+      - name: Wait for SSH
+        run: |
+          set -e
+
+          for HOST in "$MASTER_IP" "$WORKER1_IP" "$WORKER2_IP"; do
+            echo "Waiting for SSH on $HOST"
+
+            for i in {1..30}; do
+              if ssh -i ~/.ssh/k8s-key.pem \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                ${{ secrets.MASTER_USER }}@$HOST "echo SSH_OK"; then
+                echo "SSH ready on $HOST"
+                break
+              fi
+
+              echo "SSH not ready yet on $HOST. retry=$i"
+              sleep 10
+            done
+          done
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Generate Ansible inventory
+        run: |
+          cat > ansible/inventory.ci.ini <<EOF
+          [master]
+          k8s-master ansible_host=${MASTER_IP}
+
+          [worker]
+          k8s-worker-1 ansible_host=${WORKER1_IP}
+          k8s-worker-2 ansible_host=${WORKER2_IP}
+
+          [k8s:children]
+          master
+          worker
+
+          [k8s:vars]
+          ansible_user=${{ secrets.MASTER_USER }}
+          ansible_ssh_private_key_file=~/.ssh/k8s-key.pem
+          ansible_python_interpreter=/usr/bin/python3
+          ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+          EOF
+
+          cat ansible/inventory.ci.ini
+
+      - name: Ansible ping
+        run: |
+          ansible -i ansible/inventory.ci.ini k8s -m ping
+
+      - name: Configure Kubernetes with Ansible
+        run: |
+          ansible-playbook -i ansible/inventory.ci.ini ansible/site.yml
+
+      - name: Verify Kubernetes nodes
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.MASTER_USER }}@$MASTER_IP "
+              kubectl get nodes
+            "
+
+      - name: Deploy smoke test
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.MASTER_USER }}@$MASTER_IP "
+              mkdir -p ~/deploy/3rd_project/k8s/smoke-test
+            "
+
+          scp -i ~/.ssh/k8s-key.pem \
+            -o StrictHostKeyChecking=no \
+            -r k8s/smoke-test/* \
+            ${{ secrets.MASTER_USER }}@$MASTER_IP:~/deploy/3rd_project/k8s/smoke-test/
+
+          ssh -i ~/.ssh/k8s-key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.MASTER_USER }}@$MASTER_IP "
+              kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/namespace.yml &&
+
+              until kubectl get namespace ci-cd-test >/dev/null 2>&1; do
+                echo 'Waiting for namespace ci-cd-test...'
+                sleep 2
+              done &&
+
+              kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/deployment.yml &&
+              kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service.yml &&
+
+              kubectl rollout status deployment/ci-cd-smoke-app -n ci-cd-test --timeout=120s &&
+              kubectl get pods -n ci-cd-test -o wide &&
+              kubectl get svc -n ci-cd-test
+            "
+            
