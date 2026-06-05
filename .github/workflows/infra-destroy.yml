@@ -1,0 +1,56 @@
+name: Infra Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Type destroy to confirm infrastructure deletion'
+        required: true
+        default: 'no'
+
+jobs:
+  destroy-infra:
+    name: Destroy EC2 infrastructure
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      TF_STATE_KEY: 3rd_project/terraform.tfstate
+
+    steps:
+      - name: Check destroy confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_destroy }}" != "destroy" ]; then
+            echo "You must type 'destroy' to confirm."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init with S3 backend
+        working-directory: terraform
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${TF_STATE_KEY}" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform destroy plan
+        working-directory: terraform
+        run: terraform plan -destroy
+
+      - name: Terraform destroy
+        working-directory: terraform
+        run: terraform destroy -auto-approve
