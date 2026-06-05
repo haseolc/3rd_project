@@ -174,7 +174,8 @@ jobs:
           ssh -i ~/.ssh/k8s-key.pem \
             -o StrictHostKeyChecking=no \
             ${{ secrets.MASTER_USER }}@$MASTER_IP "
-              kubectl get nodes
+              kubectl wait --for=condition=Ready nodes --all --timeout=300s
+              kubectl get nodes -o wide
             "
 
       - name: Deploy smoke test
