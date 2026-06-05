@@ -58,7 +58,16 @@ jobs:
       - name: Apply Kubernetes manifests
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.MASTER_USER }}@$MASTER_HOST "
-            kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test &&
+            kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/namespace.yml &&
+
+            until kubectl get namespace ci-cd-test >/dev/null 2>&1; do
+              echo 'Waiting for namespace ci-cd-test...'
+              sleep 2
+            done &&
+
+            kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/deployment.yml &&
+            kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service.yml &&
+
             kubectl rollout status deployment/ci-cd-smoke-app -n ci-cd-test --timeout=120s &&
             kubectl get pods -n ci-cd-test -o wide &&
             kubectl get svc -n ci-cd-test
