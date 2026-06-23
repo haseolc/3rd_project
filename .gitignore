@@ -2,7 +2,6 @@
 .terraform/
 *.tfstate
 *.tfstate.backup
-.terraform.lock.hcl
 
 # SSH
 *.pem
@@ -25,3 +24,11 @@ retry_files_enabled
 *.retry
 
 .venv/
+
+# Terraform working files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
