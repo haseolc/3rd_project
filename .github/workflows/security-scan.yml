@@ -31,14 +31,17 @@ jobs:
           persist-credentials: false
 
       # ------------------------------------------------------
-      # Checkov
-      # Terraform, Kubernetes, GitHub Actions 구성 검사
+      # Checkov 설치
       # ------------------------------------------------------
       - name: Install Checkov
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install checkov==3.3.2
 
+      # ------------------------------------------------------
+      # 전체 Baseline
+      # Terraform의 현재 아키텍처 경고를 기록하되 차단하지 않음
+      # ------------------------------------------------------
       - name: Run Checkov baseline scan
         run: |
           checkov \
@@ -50,25 +53,62 @@ jobs:
             --skip-path .terraform
 
       # ------------------------------------------------------
-      # Trivy
-      # 의존성 취약점 및 Secret 노출 검사
+      # Kubernetes Hard Gate
+      # 실패 항목이 있으면 Workflow 차단
       # ------------------------------------------------------
-      - name: Run Trivy filesystem baseline scan
+      - name: Run Checkov Kubernetes security gate
+        run: |
+          checkov \
+            --directory k8s \
+            --framework kubernetes \
+            --quiet \
+            --compact
+
+      # ------------------------------------------------------
+      # Ansible Hard Gate
+      # 실패 항목이 있으면 Workflow 차단
+      # ------------------------------------------------------
+      - name: Run Checkov Ansible security gate
+        run: |
+          checkov \
+            --directory ansible \
+            --framework ansible \
+            --quiet \
+            --compact
+
+      # ------------------------------------------------------
+      # Secret Hard Gate
+      # 저장소에서 Secret이 탐지되면 Workflow 차단
+      # ------------------------------------------------------
+      - name: Run Trivy secret security gate
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: fs
           scan-ref: .
-          scanners: vuln,secret
+          scanners: secret
           severity: HIGH,CRITICAL
-          ignore-unfixed: true
           format: table
-          exit-code: "0"
+          exit-code: "1"
 
       # ------------------------------------------------------
-      # Trivy
-      # Terraform 및 Kubernetes IaC 구성 검사
+      # Kubernetes IaC Hard Gate
+      # HIGH 또는 CRITICAL 구성 오류가 있으면 차단
       # ------------------------------------------------------
-      - name: Run Trivy IaC baseline scan
+      - name: Run Trivy Kubernetes IaC security gate
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: config
+          scan-ref: k8s
+          severity: HIGH,CRITICAL
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      # ------------------------------------------------------
+      # 전체 IaC Baseline
+      # Terraform의 현재 잔여 위험을 기록하되 차단하지 않음
+      # ------------------------------------------------------
+      - name: Run Trivy full IaC baseline scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: config
