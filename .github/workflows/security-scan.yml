@@ -1,0 +1,78 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-scan:
+    name: Checkov and Trivy Scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        # actions/checkout v4.2.2
+
+      # ------------------------------------------------------
+      # Checkov
+      # Terraform, Kubernetes, GitHub Actions 구성 검사
+      # ------------------------------------------------------
+      - name: Install Checkov
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install checkov==3.3.2
+
+      - name: Run Checkov baseline scan
+        run: |
+          checkov \
+            --directory . \
+            --quiet \
+            --compact \
+            --soft-fail \
+            --skip-path .git \
+            --skip-path .terraform
+
+      # ------------------------------------------------------
+      # Trivy
+      # 의존성 취약점 및 Secret 노출 검사
+      # ------------------------------------------------------
+      - name: Run Trivy filesystem baseline scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+
+      # ------------------------------------------------------
+      # Trivy
+      # Terraform 및 Kubernetes IaC 구성 검사
+      # ------------------------------------------------------
+      - name: Run Trivy IaC baseline scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          format: table
+          exit-code: "0"
+          skip-setup-trivy: true
