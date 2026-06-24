@@ -91,6 +91,62 @@ jobs:
           exit-code: "1"
 
       # ------------------------------------------------------
+      # Container Image Baseline
+      # Manifest에서 Digest 고정 이미지를 읽어 취약점을 검사
+      # 현재는 결과 분석을 위해 Baseline으로 실행
+      # ------------------------------------------------------
+      - name: Resolve container image references
+        id: container-images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verification_image=$(
+            awk '$1 == "image:" {print $2; exit}'               k8s/external-secrets/verification-pod.yml
+          )
+
+          smoke_image=$(
+            awk '$1 == "image:" {print $2; exit}'               k8s/smoke-test/deployment.yml
+          )
+
+          for image in "$verification_image" "$smoke_image"; do
+            if [[ ! "$image" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
+              echo "ERROR: Digest로 고정되지 않은 이미지입니다: $image"
+              exit 1
+            fi
+          done
+
+          echo "verification_image=$verification_image" >> "$GITHUB_OUTPUT"
+          echo "smoke_image=$smoke_image" >> "$GITHUB_OUTPUT"
+
+          echo "Verification image: $verification_image"
+          echo "Smoke image: $smoke_image"
+
+      - name: Run Trivy verification image baseline scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: image
+          image-ref: ${{ steps.container-images.outputs.verification_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Run Trivy smoke image baseline scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: image
+          image-ref: ${{ steps.container-images.outputs.smoke_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      # ------------------------------------------------------
       # Kubernetes IaC Hard Gate
       # HIGH 또는 CRITICAL 구성 오류가 있으면 차단
       # ------------------------------------------------------
