@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-postgresql-secret-verification
+  namespace: ops-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql-secret-verification
+  policyTypes:
+    - Ingress
+    - Egress

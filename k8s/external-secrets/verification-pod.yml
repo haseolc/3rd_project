@@ -3,47 +3,77 @@ kind: Pod
 metadata:
   name: postgresql-secret-verification
   namespace: ops-platform
+  annotations:
+    checkov.io/skip1: "CKV_K8S_8=One-shot verification Pod exits after validating secret files; liveness probe is not applicable"
+    checkov.io/skip2: "CKV_K8S_9=One-shot verification Pod exits after validating secret files; readiness probe is not applicable"
   labels:
+    app: postgresql-secret-verification
     app.kubernetes.io/name: secret-verification
     app.kubernetes.io/part-of: 3rd-project
 spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
   restartPolicy: Never
-
   containers:
-    - name: verifier
-      image: busybox:1.36.1
-      command:
-        - /bin/sh
-        - -c
-        - |
-          test -n "${DB_USERNAME}"
-          test -n "${DB_PASSWORD}"
-          test -n "${DB_NAME}"
-          test -n "${DB_PORT}"
-          echo "PostgreSQL secret injection verified"
-          sleep 3600
+  - name: verifier
+    image: busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+    imagePullPolicy: Always
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 65534
+      runAsGroup: 65534
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        cpu: 50m
+        memory: 32Mi
+    command:
+    - /bin/sh
+    - -c
+    - 'set -eu
 
-      env:
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-credentials
-              key: username
 
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-credentials
-              key: password
+      SECRET_DIR="/var/run/secrets/postgresql"
 
-        - name: DB_NAME
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-credentials
-              key: database
 
-        - name: DB_PORT
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-credentials
-              key: port
+      test -s "${SECRET_DIR}/username"
+
+      test -s "${SECRET_DIR}/password"
+
+      test -s "${SECRET_DIR}/database"
+
+      test -s "${SECRET_DIR}/port"
+
+
+      echo "PostgreSQL secret file injection verified"
+
+      '
+    volumeMounts:
+    - name: postgresql-credentials
+      mountPath: /var/run/secrets/postgresql
+      readOnly: true
+  volumes:
+  - name: postgresql-credentials
+    secret:
+      secretName: postgresql-credentials
+      items:
+      - key: username
+        path: username
+      - key: password
+        path: password
+      - key: database
+        path: database
+      - key: port
+        path: port
