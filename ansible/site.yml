@@ -9,3 +9,4 @@
 - import_playbook: worker-join.yml
 - import_playbook: helm.yml
 - import_playbook: external-secrets.yml
+- import_playbook: external-secrets-resources.yml

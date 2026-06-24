@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ops-platform
+  labels:
+    app.kubernetes.io/name: ops-platform
+    app.kubernetes.io/part-of: 3rd-project
