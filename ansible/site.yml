@@ -1,8 +1,11 @@
 ---
 - import_playbook: k8s-prereq.yml
+- import_playbook: hostname.yml
 - import_playbook: containerd.yml
 - import_playbook: k8s-packages.yml
 - import_playbook: kubeadm-init.yml
 - import_playbook: kubeconfig.yml
 - import_playbook: calico.yml
 - import_playbook: worker-join.yml
+- import_playbook: helm.yml
+- import_playbook: external-secrets.yml

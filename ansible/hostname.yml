@@ -1,0 +1,22 @@
+---
+- name: Configure stable Kubernetes node hostnames
+  hosts: k8s
+  become: yes
+
+  tasks:
+    - name: Preserve configured hostname across reboots
+      ansible.builtin.lineinfile:
+        path: /etc/cloud/cloud.cfg
+        regexp: '^preserve_hostname:'
+        line: 'preserve_hostname: true'
+
+    - name: Set hostname from Ansible inventory
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Configure local hostname resolution
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1\s+'
+        line: "127.0.1.1 {{ inventory_hostname }}"
+        insertafter: '^127\.0\.0\.1\s+localhost'
