@@ -7,6 +7,7 @@ metadata:
     app: ci-cd-smoke-app
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: ci-cd-smoke-app
@@ -15,11 +16,57 @@ spec:
       labels:
         app: ci-cd-smoke-app
     spec:
+      automountServiceAccountToken: false
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10101
+        runAsGroup: 10101
+        fsGroup: 10101
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: nginx
-          image: nginx:stable-alpine
+          image: nginxinc/nginx-unprivileged@sha256:458ecbec226a23120713b35945bcdf0d6e4ea5bbec60c149ce1deca5d264071b
+          imagePullPolicy: Always
+
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10101
+            runAsGroup: 10101
+            capabilities:
+              drop:
+                - ALL
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
           resources:
             requests:
               cpu: "10m"
@@ -27,3 +74,11 @@ spec:
             limits:
               cpu: "100m"
               memory: "128Mi"
+
+          volumeMounts:
+            - name: nginx-tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: nginx-tmp
+          emptyDir: {}

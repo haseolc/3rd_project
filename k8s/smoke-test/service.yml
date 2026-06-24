@@ -8,5 +8,7 @@ spec:
   selector:
     app: ci-cd-smoke-app
   ports:
-    - port: 80
-      targetPort: 80
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
