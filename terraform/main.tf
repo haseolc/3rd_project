@@ -23,6 +23,22 @@ resource "aws_security_group" "k8s_sg" {
   vpc_id      = aws_vpc.main_vpc.id
 
   ingress {
+    description = "Calico BGP between Kubernetes nodes"
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Calico IP-in-IP between Kubernetes nodes"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "4"
+    self        = true
+  }
+
+  ingress {
     from_port   = 4789
     to_port     = 4789
     protocol    = "udp"
