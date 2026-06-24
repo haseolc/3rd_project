@@ -1,6 +1,7 @@
 name: Security Scan
 
 on:
+  workflow_call:
   pull_request:
     branches:
       - main
@@ -15,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: security-scan-${{ github.ref }}
+  group: security-scan-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -91,9 +92,9 @@ jobs:
           exit-code: "1"
 
       # ------------------------------------------------------
-      # Container Image Baseline
+      # Container Image Hard Gate
       # Manifest에서 Digest 고정 이미지를 읽어 취약점을 검사
-      # 현재는 결과 분석을 위해 Baseline으로 실행
+      # 패치 가능한 HIGH 또는 CRITICAL 취약점 탐지 시 차단
       # ------------------------------------------------------
       - name: Resolve container image references
         id: container-images
@@ -122,7 +123,7 @@ jobs:
           echo "Verification image: $verification_image"
           echo "Smoke image: $smoke_image"
 
-      - name: Run Trivy verification image baseline scan
+      - name: Run Trivy verification image security gate
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: image
@@ -131,10 +132,10 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
-          exit-code: "0"
+          exit-code: "1"
           skip-setup-trivy: true
 
-      - name: Run Trivy smoke image baseline scan
+      - name: Run Trivy smoke image security gate
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: image
@@ -143,7 +144,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
-          exit-code: "0"
+          exit-code: "1"
           skip-setup-trivy: true
 
       # ------------------------------------------------------
