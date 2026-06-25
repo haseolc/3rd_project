@@ -8,19 +8,41 @@ on:
         required: true
         default: "no"
 
-permissions:
-  contents: read
-
 jobs:
   security-gate:
     name: Security Gate
+    permissions:
+      contents: read
     uses: ./.github/workflows/security-scan.yml
 
-  provision-infra-and-k8s:
+  verify-provision-oidc:
+    name: Verify Provision OIDC
     needs: security-gate
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-provision
+          role-session-name: GitHubActions-InfraProvision-Verify
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS OIDC identity
+        run: aws sts get-caller-identity
+
+  provision-infra-and-k8s:
+    needs:
+      - security-gate
+      - verify-provision-oidc
     if: ${{ inputs.confirm_provision == 'provision' }}
     name: Provision EC2 and Configure Kubernetes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -30,12 +52,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-provision
+          role-session-name: GitHubActions-InfraProvision
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS OIDC identity
+        run: aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
