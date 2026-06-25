@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/name: secret-verification
     app.kubernetes.io/part-of: 3rd-project
 spec:
+  serviceAccountName: postgresql-secret-verifier
   automountServiceAccountToken: false
   securityContext:
     runAsNonRoot: true

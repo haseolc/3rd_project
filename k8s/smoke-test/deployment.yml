@@ -16,6 +16,7 @@ spec:
       labels:
         app: ci-cd-smoke-app
     spec:
+      serviceAccountName: ci-cd-smoke-app
       automountServiceAccountToken: false
 
       securityContext:
