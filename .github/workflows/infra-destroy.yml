@@ -9,31 +9,49 @@ on:
         default: 'no'
 
 jobs:
+  verify-destroy-oidc:
+    name: Verify Destroy OIDC
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-destroy
+          role-session-name: GitHubActions-InfraDestroy-Verify
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS OIDC identity
+        run: aws sts get-caller-identity
+
   destroy-infra:
+    needs: verify-destroy-oidc
+    if: ${{ inputs.confirm_destroy == 'destroy' }}
     name: Destroy EC2 infrastructure
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       TF_STATE_KEY: 3rd_project/terraform.tfstate
 
     steps:
-      - name: Check destroy confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm_destroy }}" != "destroy" ]; then
-            echo "You must type 'destroy' to confirm."
-            exit 1
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-destroy
+          role-session-name: GitHubActions-InfraDestroy
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS OIDC identity
+        run: aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
