@@ -2,6 +2,19 @@ name: K8s Smoke CD
 
 on:
   workflow_dispatch:
+    inputs:
+      execution_mode:
+        description: "Choose oidc-only to test AWS authentication without deployment"
+        required: true
+        type: choice
+        options:
+          - oidc-only
+          - deploy
+        default: oidc-only
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   deploy-smoke-test:
@@ -12,18 +25,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-smoke
+          role-session-name: GitHubActions-K8sSmokeCD
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Check AWS CLI
+      - name: Verify AWS OIDC identity
         run: |
           aws --version
+          aws sts get-caller-identity
 
       - name: Get current master public IP by EC2 tag
+        if: ${{ inputs.execution_mode == 'deploy' }}
         run: |
           MASTER_HOST=$(aws ec2 describe-instances \
             --filters \
@@ -44,6 +59,7 @@ jobs:
           echo "Current master host: $MASTER_HOST"
 
       - name: Configure SSH key
+        if: ${{ inputs.execution_mode == 'deploy' }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.MASTER_SSH_KEY }}" | tr -d '\r' > ~/.ssh/k8s-key.pem
@@ -51,11 +67,13 @@ jobs:
           ssh-keyscan -H "$MASTER_HOST" >> ~/.ssh/known_hosts
 
       - name: Copy Kubernetes manifests to master node
+        if: ${{ inputs.execution_mode == 'deploy' }}
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.MASTER_USER }}@$MASTER_HOST "mkdir -p ~/deploy/3rd_project/k8s/smoke-test"
           scp -i ~/.ssh/k8s-key.pem -r k8s/smoke-test/* ${{ secrets.MASTER_USER }}@$MASTER_HOST:~/deploy/3rd_project/k8s/smoke-test/
 
       - name: Apply Kubernetes manifests
+        if: ${{ inputs.execution_mode == 'deploy' }}
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.MASTER_USER }}@$MASTER_HOST "
             kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/namespace.yml &&
