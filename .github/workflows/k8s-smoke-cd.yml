@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: arn:aws:iam::416170614736:role/3rd-project/3rd-project-github-smoke
           role-session-name: GitHubActions-K8sSmokeCD
