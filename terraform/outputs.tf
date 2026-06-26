@@ -81,7 +81,7 @@ output "master_ssh_command" {
   value       = "ssh -i ~/.ssh/k8s-key.pem ubuntu@${aws_instance.k8s_master.public_ip}"
 }
 
-output "grafana_url" {
-  description = "Grafana NodePort URL"
-  value       = "http://${aws_instance.k8s_master.public_ip}:30425"
+output "monitoring_access_note" {
+  description = "Secure access method for Grafana and Prometheus"
+  value       = "Monitoring services use ClusterIP. Connect to the master through temporary SSH access and use kubectl port-forward."
 }

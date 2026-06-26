@@ -10,7 +10,7 @@ resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "ap-northeast-2a"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "public-subnet"
@@ -55,14 +55,6 @@ resource "aws_security_group" "k8s_sg" {
   }
 
   ingress {
-    description = "SSH access for infrastructure provisioning"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
     description = "Kubelet API communication within VPC"
     from_port   = 10250
     to_port     = 10250
@@ -71,26 +63,42 @@ resource "aws_security_group" "k8s_sg" {
   }
 
   ingress {
-    description = "Kubernetes API server access"
+    description = "Kubernetes API server access within VPC"
     from_port   = 6443
     to_port     = 6443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
-  ingress {
-    description = "Kubernetes NodePort service access"
-    from_port   = 30000
-    to_port     = 32767
+  egress {
+    description = "All outbound communication within the VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  egress {
+    description = "Kubernetes pod network outbound communication"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["192.168.0.0/16"]
+  }
+
+  egress {
+    description = "HTTPS access for packages images and AWS APIs"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    description = "Outbound access for packages and container images"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTP access for package repositories and redirects"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -105,9 +113,12 @@ resource "aws_key_pair" "k8s_key" {
 }
 
 resource "aws_instance" "k8s_master" {
+  #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
+  #checkov:skip=CKV2_AWS_41:This node does not call AWS APIs; attaching an IAM role would grant unnecessary permissions.
   ami                         = "ami-0c9c942bd7bf113a2"
   instance_type               = "t3.medium"
   ebs_optimized               = true
+  monitoring                  = true
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.k8s_sg.id]
   key_name                    = aws_key_pair.k8s_key.key_name
@@ -161,9 +172,12 @@ resource "aws_route_table_association" "public_assoc" {
 }
 
 resource "aws_instance" "k8s_worker_1" {
+  #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
+  #checkov:skip=CKV2_AWS_41:This node does not call AWS APIs; attaching an IAM role would grant unnecessary permissions.
   ami                         = "ami-0c9c942bd7bf113a2"
   instance_type               = "t3.medium"
   ebs_optimized               = true
+  monitoring                  = true
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.k8s_sg.id]
   key_name                    = aws_key_pair.k8s_key.key_name
@@ -191,9 +205,11 @@ resource "aws_instance" "k8s_worker_1" {
 }
 
 resource "aws_instance" "k8s_worker_2" {
+  #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
   ami                    = "ami-0c9c942bd7bf113a2"
   instance_type          = "t3.small"
   ebs_optimized          = true
+  monitoring             = true
   subnet_id              = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
   key_name               = aws_key_pair.k8s_key.key_name

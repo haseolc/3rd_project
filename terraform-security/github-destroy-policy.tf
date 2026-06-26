@@ -40,6 +40,7 @@ data "aws_iam_policy_document" "github_destroy" {
     actions = [
       "ec2:DescribeAccountAttributes",
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeFlowLogs",
       "ec2:DescribeIamInstanceProfileAssociations",
       "ec2:DescribeImages",
       "ec2:DescribeInstanceAttribute",
@@ -74,6 +75,7 @@ data "aws_iam_policy_document" "github_destroy" {
     effect = "Allow"
 
     actions = [
+      "ec2:DeleteFlowLogs",
       "ec2:DeleteInternetGateway",
       "ec2:DeleteKeyPair",
       "ec2:DeleteRoute",

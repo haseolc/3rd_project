@@ -40,6 +40,7 @@ data "aws_iam_policy_document" "github_provision" {
     actions = [
       "ec2:DescribeAccountAttributes",
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeFlowLogs",
       "ec2:DescribeIamInstanceProfileAssociations",
       "ec2:DescribeImages",
       "ec2:DescribeInstanceAttribute",
@@ -81,6 +82,7 @@ data "aws_iam_policy_document" "github_provision" {
       "ec2:AttachInternetGateway",
       "ec2:AuthorizeSecurityGroupEgress",
       "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CreateFlowLogs",
       "ec2:CreateInternetGateway",
       "ec2:CreateRoute",
       "ec2:CreateRouteTable",
@@ -88,6 +90,7 @@ data "aws_iam_policy_document" "github_provision" {
       "ec2:CreateSubnet",
       "ec2:CreateTags",
       "ec2:CreateVpc",
+      "ec2:DeleteFlowLogs",
       "ec2:DeleteInternetGateway",
       "ec2:DeleteKeyPair",
       "ec2:DeleteRoute",

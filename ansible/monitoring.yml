@@ -25,7 +25,7 @@
       command: >
         helm upgrade --install monitoring prometheus-community/kube-prometheus-stack
         --namespace monitoring
-        --set grafana.service.type=NodePort
-        --set prometheus.service.type=NodePort
+        --set grafana.service.type=ClusterIP
+        --set prometheus.service.type=ClusterIP
       environment:
         KUBECONFIG: /home/ubuntu/.kube/config
