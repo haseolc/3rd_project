@@ -98,23 +98,12 @@ jobs:
             exit 1
           fi
 
-          SG_IDS=$(aws ec2 describe-security-groups \
-            --filters \
-              "Name=group-name,Values=k8s-sg" \
-              "Name=tag:Name,Values=k8s-sg" \
-              "Name=tag:environment,Values=sandbox" \
-            --query "SecurityGroups[].GroupId" \
-            --output text)
+          SG_ID=$(terraform -chdir=terraform output -raw security_group_id)
 
-          SG_COUNT=$(echo "$SG_IDS" | wc -w)
-
-          if [ "$SG_COUNT" -ne 1 ]; then
-            echo "Expected exactly one k8s security group, found: $SG_COUNT"
-            echo "Security groups: $SG_IDS"
+          if [[ ! "$SG_ID" =~ ^sg-[0-9a-f]+$ ]]; then
+            echo "Invalid Terraform security group ID: $SG_ID"
             exit 1
           fi
-
-          SG_ID="$SG_IDS"
           RUNNER_CIDR="${RUNNER_IP}/32"
 
           SSH_RULE_ID=$(aws ec2 authorize-security-group-ingress \
