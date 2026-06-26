@@ -380,6 +380,7 @@ jobs:
           set -euo pipefail
 
           aws ec2 revoke-security-group-ingress \
+            --group-id "$SG_ID" \
             --security-group-rule-ids "$SSH_RULE_ID"
 
           echo "Temporary SSH access revoked: $RUNNER_CIDR"
