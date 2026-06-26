@@ -287,6 +287,7 @@ jobs:
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service.yml &&
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/network-policy.yml &&
 
+              kubectl rollout restart deployment/ci-cd-smoke-app -n ci-cd-test &&
               kubectl rollout status deployment/ci-cd-smoke-app -n ci-cd-test --timeout=120s &&
               kubectl get pods -n ci-cd-test -o wide &&
               kubectl get svc -n ci-cd-test
