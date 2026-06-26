@@ -282,6 +282,7 @@ jobs:
                 sleep 2
               done &&
 
+              kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service-account.yml &&
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/deployment.yml &&
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service.yml &&
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/network-policy.yml &&
