@@ -44,6 +44,7 @@ data "aws_iam_policy_document" "github_provision" {
       "ec2:DescribeIamInstanceProfileAssociations",
       "ec2:DescribeImages",
       "ec2:DescribeInstanceAttribute",
+      "ec2:DescribeInstanceCreditSpecifications",
       "ec2:DescribeInstances",
       "ec2:DescribeInstanceStatus",
       "ec2:DescribeInstanceTypes",
