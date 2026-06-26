@@ -70,6 +70,14 @@ resource "aws_security_group" "k8s_sg" {
     cidr_blocks = ["10.0.0.0/16"]
   }
 
+  ingress {
+    description     = "Smoke NodePort access from ALB only"
+    from_port       = 30080
+    to_port         = 30080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.smoke_alb.id]
+  }
+
   egress {
     description = "All outbound communication within the VPC"
     from_port   = 0

@@ -102,6 +102,71 @@ data "aws_iam_policy_document" "github_destroy" {
   }
 
   statement {
+    sid    = "DeleteProjectLoadBalancerAndWAF"
+    effect = "Allow"
+
+    actions = [
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DeleteWebACLAssociation",
+      "elasticloadbalancing:DeregisterTargets",
+      "elasticloadbalancing:DescribeListenerAttributes",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeRules",
+      "elasticloadbalancing:DescribeTags",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:DescribeWebACLAssociation",
+      "elasticloadbalancing:GetLoadBalancerWebACL",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:SetWebAcl",
+      "wafv2:DeleteLoggingConfiguration",
+      "wafv2:DeleteWebACL",
+      "wafv2:DisassociateWebACL",
+      "wafv2:GetLoggingConfiguration",
+      "wafv2:GetWebACL",
+      "wafv2:GetWebACLForResource",
+      "wafv2:ListResourcesForWebACL",
+      "wafv2:ListTagsForResource",
+      "wafv2:ListWebACLs",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
+    sid    = "DeleteWAFCloudWatchLogging"
+    effect = "Allow"
+
+    actions = [
+      "logs:DeleteLogDelivery",
+      "logs:DeleteLogGroup",
+      "logs:DescribeLogGroups",
+      "logs:DescribeResourcePolicies",
+      "logs:ListTagsForResource",
+      "logs:PutResourcePolicy",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
     sid     = "ReadExternalSecretsInstanceProfile"
     effect  = "Allow"
     actions = ["iam:GetInstanceProfile"]

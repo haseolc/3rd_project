@@ -85,3 +85,18 @@ output "monitoring_access_note" {
   description = "Secure access method for Grafana and Prometheus"
   value       = "Monitoring services use ClusterIP. Connect to the master through temporary SSH access and use kubectl port-forward."
 }
+
+output "smoke_alb_dns_name" {
+  description = "Public DNS name of the WAF-protected smoke test ALB"
+  value       = aws_lb.smoke.dns_name
+}
+
+output "smoke_alb_url" {
+  description = "HTTP URL of the WAF-protected smoke test application"
+  value       = "http://${aws_lb.smoke.dns_name}"
+}
+
+output "smoke_waf_arn" {
+  description = "ARN of the regional AWS WAF Web ACL"
+  value       = aws_wafv2_web_acl.smoke.arn
+}

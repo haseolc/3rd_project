@@ -126,6 +126,111 @@ data "aws_iam_policy_document" "github_provision" {
   }
 
   statement {
+    sid    = "ManageProjectLoadBalancerAndWAF"
+    effect = "Allow"
+
+    actions = [
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:CreateWebACLAssociation",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DeleteWebACLAssociation",
+      "elasticloadbalancing:DeregisterTargets",
+      "elasticloadbalancing:DescribeAccountLimits",
+      "elasticloadbalancing:DescribeListenerAttributes",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeRules",
+      "elasticloadbalancing:DescribeTags",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:DescribeWebACLAssociation",
+      "elasticloadbalancing:GetLoadBalancerWebACL",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:ModifyListenerAttributes",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyTargetGroupAttributes",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:SetSecurityGroups",
+      "elasticloadbalancing:SetSubnets",
+      "elasticloadbalancing:SetWebAcl",
+      "wafv2:AssociateWebACL",
+      "wafv2:CreateWebACL",
+      "wafv2:DeleteLoggingConfiguration",
+      "wafv2:DeleteWebACL",
+      "wafv2:DescribeManagedRuleGroup",
+      "wafv2:DisassociateWebACL",
+      "wafv2:GetLoggingConfiguration",
+      "wafv2:GetWebACL",
+      "wafv2:GetWebACLForResource",
+      "wafv2:ListAvailableManagedRuleGroups",
+      "wafv2:ListResourcesForWebACL",
+      "wafv2:ListTagsForResource",
+      "wafv2:ListWebACLs",
+      "wafv2:PutLoggingConfiguration",
+      "wafv2:TagResource",
+      "wafv2:UntagResource",
+      "wafv2:UpdateWebACL",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
+    sid    = "ManageWAFCloudWatchLogging"
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:CreateLogGroup",
+      "logs:DeleteLogDelivery",
+      "logs:DeleteLogGroup",
+      "logs:DescribeLogGroups",
+      "logs:DescribeResourcePolicies",
+      "logs:ListTagsForResource",
+      "logs:PutResourcePolicy",
+      "logs:PutRetentionPolicy",
+      "logs:TagResource",
+      "logs:UntagResource",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
+    sid       = "CreateELBServiceLinkedRole"
+    effect    = "Allow"
+    actions   = ["iam:CreateServiceLinkedRole"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:AWSServiceName"
+      values   = ["elasticloadbalancing.amazonaws.com"]
+    }
+  }
+
+  statement {
     sid    = "ReadExternalSecretsInstanceProfile"
     effect = "Allow"
 

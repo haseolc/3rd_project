@@ -19,4 +19,11 @@ spec:
         - protocol: TCP
           port: 8080
 
+    - from:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 8080
+
   egress: []

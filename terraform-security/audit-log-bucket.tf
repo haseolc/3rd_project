@@ -4,6 +4,7 @@ locals {
   audit_log_bucket_name = "sagal-3rd-project-audit-logs-${data.aws_caller_identity.current.account_id}-ap-northeast-2"
   cloudtrail_name       = "3rd-project-security-audit"
   cloudtrail_s3_prefix  = "cloudtrail"
+  alb_access_log_prefix = "alb"
   cloudtrail_source_arn = "arn:aws:cloudtrail:ap-northeast-2:${data.aws_caller_identity.current.account_id}:trail/${local.cloudtrail_name}"
 }
 
@@ -194,6 +195,36 @@ data "aws_iam_policy_document" "audit_logs" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values   = [local.cloudtrail_source_arn]
+    }
+  }
+
+  statement {
+    sid    = "AWSLoadBalancerLogDeliveryWrite"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["logdelivery.elasticloadbalancing.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = [
+      "${aws_s3_bucket.audit_logs.arn}/${local.alb_access_log_prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values = [
+        "arn:aws:elasticloadbalancing:ap-northeast-2:${data.aws_caller_identity.current.account_id}:loadbalancer/app/3rd-project-smoke-alb/*",
+      ]
     }
   }
 

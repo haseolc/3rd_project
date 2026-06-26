@@ -1,5 +1,6 @@
 name: Infra Provision
 
+#checkov:skip=CKV_GHA_7:confirm_provision is an intentional manual safety gate; the value is only compared with the fixed string provision and is not passed to Terraform or shell commands.
 on:
   workflow_dispatch:
     inputs:
@@ -7,6 +8,8 @@ on:
         description: "Type provision to confirm infrastructure changes"
         required: true
         default: "no"
+
+permissions: {}
 
 jobs:
   security-gate:
@@ -292,11 +295,95 @@ jobs:
 
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/deployment.yml &&
               kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/service.yml &&
+              kubectl apply -f ~/deploy/3rd_project/k8s/smoke-test/network-policy.yml &&
 
               kubectl rollout status deployment/ci-cd-smoke-app -n ci-cd-test --timeout=120s &&
               kubectl get pods -n ci-cd-test -o wide &&
               kubectl get svc -n ci-cd-test
             "
+
+      - name: Wait for ALB targets to become healthy
+        run: |
+          set -euo pipefail
+
+          TARGET_GROUP_ARN=$(aws elbv2 describe-target-groups \
+            --names 3rd-project-smoke-tg \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+
+          if [ -z "$TARGET_GROUP_ARN" ] || [ "$TARGET_GROUP_ARN" = "None" ]; then
+            echo "Target Group ARN not found."
+            exit 1
+          fi
+
+          echo "TARGET_GROUP_ARN=$TARGET_GROUP_ARN" >> "$GITHUB_ENV"
+
+          for attempt in {1..30}; do
+            STATES=$(aws elbv2 describe-target-health \
+              --target-group-arn "$TARGET_GROUP_ARN" \
+              --query 'TargetHealthDescriptions[].TargetHealth.State' \
+              --output text)
+
+            TOTAL=$(wc -w <<< "$STATES" | tr -d '[:space:]')
+            HEALTHY=$(tr '\t' '\n' <<< "$STATES" | grep -cx 'healthy' || true)
+
+            echo "attempt=$attempt states=${STATES:-none}"
+
+            if [ "$TOTAL" -eq 2 ] && [ "$HEALTHY" -eq 2 ]; then
+              echo "Both Kubernetes worker targets are healthy."
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              aws elbv2 describe-target-health \
+                --target-group-arn "$TARGET_GROUP_ARN"
+
+              echo "ALB targets did not become healthy."
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+      - name: Verify WAF-protected ALB endpoint
+        run: |
+          set -euo pipefail
+
+          ALB_URL=$(terraform -chdir=terraform output -raw smoke_alb_url)
+          echo "ALB_URL=$ALB_URL" >> "$GITHUB_ENV"
+
+          NORMAL_STATUS=$(curl -sS \
+            -o /tmp/alb-normal-response.txt \
+            -w '%{http_code}' \
+            --retry 6 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            "$ALB_URL/")
+
+          echo "Normal request status: $NORMAL_STATUS"
+
+          if [ "$NORMAL_STATUS" != "200" ]; then
+            cat /tmp/alb-normal-response.txt || true
+            echo "Expected normal ALB request to return HTTP 200."
+            exit 1
+          fi
+
+          BLOCK_STATUS=$(curl -sS \
+            -o /tmp/alb-waf-block-response.txt \
+            -w '%{http_code}' \
+            --get \
+            --data-urlencode 'q=${jndi:ldap://example.com/test}' \
+            "$ALB_URL/")
+
+          echo "WAF test request status: $BLOCK_STATUS"
+
+          if [ "$BLOCK_STATUS" != "403" ]; then
+            cat /tmp/alb-waf-block-response.txt || true
+            echo "Expected malicious test request to be blocked with HTTP 403."
+            exit 1
+          fi
+
+          echo "ALB normal request and AWS WAF blocking test passed."
 
       - name: Revoke temporary SSH access
         if: ${{ always() && env.SSH_RULE_ID != '' }}
