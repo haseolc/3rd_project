@@ -2,6 +2,9 @@ data "aws_caller_identity" "current" {}
 
 locals {
   audit_log_bucket_name = "sagal-3rd-project-audit-logs-${data.aws_caller_identity.current.account_id}-ap-northeast-2"
+  cloudtrail_name       = "3rd-project-security-audit"
+  cloudtrail_s3_prefix  = "cloudtrail"
+  cloudtrail_source_arn = "arn:aws:cloudtrail:ap-northeast-2:${data.aws_caller_identity.current.account_id}:trail/${local.cloudtrail_name}"
 }
 
 resource "aws_s3_bucket" "audit_logs" {
@@ -141,6 +144,56 @@ data "aws_iam_policy_document" "audit_logs" {
       values = [
         "arn:aws:logs:ap-northeast-2:${data.aws_caller_identity.current.account_id}:*",
       ]
+    }
+  }
+
+  statement {
+    sid    = "AWSCloudTrailAclCheck"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+
+    actions = ["s3:GetBucketAcl"]
+
+    resources = [
+      aws_s3_bucket.audit_logs.arn,
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values   = [local.cloudtrail_source_arn]
+    }
+  }
+
+  statement {
+    sid    = "AWSCloudTrailWrite"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = [
+      "${aws_s3_bucket.audit_logs.arn}/${local.cloudtrail_s3_prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values   = [local.cloudtrail_source_arn]
     }
   }
 
