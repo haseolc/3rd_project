@@ -107,6 +107,7 @@ data "aws_iam_policy_document" "github_provision" {
       "ec2:ModifyInstanceMetadataOptions",
       "ec2:ModifySubnetAttribute",
       "ec2:ModifyVpcAttribute",
+      "ec2:MonitorInstances",
       "ec2:ReplaceIamInstanceProfileAssociation",
       "ec2:ReplaceRoute",
       "ec2:ReplaceRouteTableAssociation",
@@ -114,6 +115,7 @@ data "aws_iam_policy_document" "github_provision" {
       "ec2:RevokeSecurityGroupIngress",
       "ec2:RunInstances",
       "ec2:TerminateInstances",
+      "ec2:UnmonitorInstances",
     ]
 
     resources = ["*"]

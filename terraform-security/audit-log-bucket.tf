@@ -214,16 +214,10 @@ data "aws_iam_policy_document" "audit_logs" {
     ]
 
     condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-
-    condition {
       test     = "ArnLike"
       variable = "aws:SourceArn"
       values = [
-        "arn:aws:elasticloadbalancing:ap-northeast-2:${data.aws_caller_identity.current.account_id}:loadbalancer/app/3rd-project-smoke-alb/*",
+        "arn:aws:elasticloadbalancing:ap-northeast-2:${data.aws_caller_identity.current.account_id}:loadbalancer/*",
       ]
     }
   }
