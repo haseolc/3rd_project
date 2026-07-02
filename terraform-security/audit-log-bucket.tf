@@ -13,11 +13,16 @@ resource "aws_s3_bucket" "audit_logs" {
   force_destroy = false
 
   tags = {
-    Name        = "3rd-project-audit-logs"
-    Project     = "3rd-project"
-    environment = "sandbox"
-    ManagedBy   = "terraform"
-    Purpose     = "security-audit-logs"
+    Name         = "3rd-project-audit-logs"
+    Project      = "3rd-project"
+    environment  = "sandbox"
+    owner        = "team-leader"
+    "auto-stop"  = "false"
+    service      = "shared-network"
+    team         = "infra"
+    "created-by" = "terraform"
+    ManagedBy    = "terraform"
+    Purpose      = "security-audit-logs"
   }
 }
 

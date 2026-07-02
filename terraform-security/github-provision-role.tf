@@ -34,7 +34,7 @@ resource "aws_iam_role" "github_provision" {
   tags = {
     Name        = "3rd-project-github-provision"
     Project     = "3rd-project"
-    Environment = "sandbox"
+    environment = "sandbox"
     ManagedBy   = "terraform"
     Purpose     = "github-actions-infra-provision"
   }

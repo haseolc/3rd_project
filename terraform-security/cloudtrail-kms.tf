@@ -78,7 +78,7 @@ resource "aws_kms_key" "cloudtrail" {
     Name        = "3rd-project-cloudtrail-kms"
     Project     = "3rd-project"
     environment = "sandbox"
-    Service     = "cloudtrail"
+    service     = "shared-network"
     ManagedBy   = "terraform"
     Purpose     = "audit-log-encryption"
   }

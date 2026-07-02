@@ -48,8 +48,8 @@ resource "aws_iam_policy" "external_secrets_read" {
   tags = {
     Name        = "3rd-project-external-secrets-read"
     Project     = "3rd-project"
-    Environment = "sandbox"
-    Service     = "external-secrets"
+    environment = "sandbox"
+    service     = "shared-network"
     ManagedBy   = "terraform"
   }
 }
@@ -85,8 +85,8 @@ resource "aws_iam_role" "external_secrets_ec2" {
   tags = {
     Name        = "3rd-project-external-secrets-ec2"
     Project     = "3rd-project"
-    Environment = "sandbox"
-    Service     = "external-secrets"
+    environment = "sandbox"
+    service     = "shared-network"
     ManagedBy   = "terraform"
   }
 }
@@ -114,8 +114,8 @@ resource "aws_iam_instance_profile" "external_secrets_ec2" {
   tags = {
     Name        = "3rd-project-external-secrets-ec2"
     Project     = "3rd-project"
-    Environment = "sandbox"
-    Service     = "external-secrets"
+    environment = "sandbox"
+    service     = "shared-network"
     ManagedBy   = "terraform"
   }
 }

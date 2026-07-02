@@ -8,7 +8,7 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   tags = {
     Name        = "3rd-project-github-actions-oidc"
     Project     = "3rd-project"
-    Environment = "sandbox"
+    environment = "sandbox"
     ManagedBy   = "terraform"
   }
 }

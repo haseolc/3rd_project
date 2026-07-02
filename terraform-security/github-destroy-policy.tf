@@ -188,7 +188,7 @@ resource "aws_iam_policy" "github_destroy" {
   tags = {
     Name        = "3rd-project-github-destroy"
     Project     = "3rd-project"
-    Environment = "sandbox"
+    environment = "sandbox"
     ManagedBy   = "terraform"
   }
 }

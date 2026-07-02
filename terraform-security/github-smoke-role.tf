@@ -34,7 +34,7 @@ resource "aws_iam_role" "github_smoke" {
   tags = {
     Name        = "3rd-project-github-smoke"
     Project     = "3rd-project"
-    Environment = "sandbox"
+    environment = "sandbox"
     ManagedBy   = "terraform"
     Purpose     = "github-actions-smoke-cd"
   }
@@ -58,7 +58,7 @@ resource "aws_iam_policy" "github_smoke" {
   tags = {
     Name        = "3rd-project-github-smoke-read"
     Project     = "3rd-project"
-    Environment = "sandbox"
+    environment = "sandbox"
     ManagedBy   = "terraform"
   }
 }

@@ -11,8 +11,8 @@ resource "aws_kms_key" "secrets_manager" {
   tags = {
     Name        = "3rd-project-secrets-kms"
     Project     = "3rd-project"
-    Environment = "sandbox"
-    Service     = "security"
+    environment = "sandbox"
+    service     = "shared-network"
     ManagedBy   = "terraform"
   }
 
@@ -41,8 +41,8 @@ resource "aws_secretsmanager_secret" "postgresql" {
   tags = {
     Name        = "3rd-project-postgresql-secret"
     Project     = "3rd-project"
-    Environment = "sandbox"
-    Service     = "postgresql"
+    environment = "sandbox"
+    service     = "shared-network"
     ManagedBy   = "terraform"
   }
 
