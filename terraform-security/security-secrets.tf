@@ -9,11 +9,15 @@ resource "aws_kms_key" "secrets_manager" {
   deletion_window_in_days = 7
 
   tags = {
-    Name        = "3rd-project-secrets-kms"
-    Project     = "3rd-project"
-    environment = "sandbox"
-    service     = "shared-network"
-    ManagedBy   = "terraform"
+    Name         = "3rd-project-secrets-kms"
+    Project      = "3rd-project"
+    owner        = "team-leader"
+    environment  = "sandbox"
+    "auto-stop"  = "false"
+    service      = "shared-network"
+    team         = "infra"
+    "created-by" = "terraform"
+    ManagedBy    = "terraform"
   }
 
   lifecycle {

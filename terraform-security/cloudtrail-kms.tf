@@ -75,12 +75,16 @@ resource "aws_kms_key" "cloudtrail" {
   policy                  = data.aws_iam_policy_document.cloudtrail_kms.json
 
   tags = {
-    Name        = "3rd-project-cloudtrail-kms"
-    Project     = "3rd-project"
-    environment = "sandbox"
-    service     = "shared-network"
-    ManagedBy   = "terraform"
-    Purpose     = "audit-log-encryption"
+    Name         = "3rd-project-cloudtrail-kms"
+    Project      = "3rd-project"
+    owner        = "team-leader"
+    environment  = "sandbox"
+    "auto-stop"  = "false"
+    service      = "shared-network"
+    team         = "infra"
+    "created-by" = "terraform"
+    ManagedBy    = "terraform"
+    Purpose      = "audit-log-encryption"
   }
 
   lifecycle {
