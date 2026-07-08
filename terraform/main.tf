@@ -122,7 +122,6 @@ resource "aws_key_pair" "k8s_key" {
 
 resource "aws_instance" "k8s_master" {
   #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
-  #checkov:skip=CKV2_AWS_41:This node does not call AWS APIs; attaching an IAM role would grant unnecessary permissions.
   ami                         = "ami-0c9c942bd7bf113a2"
   instance_type               = "t3.medium"
   ebs_optimized               = true
@@ -182,12 +181,14 @@ resource "aws_route_table_association" "public_assoc" {
 resource "aws_instance" "k8s_worker_1" {
   #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
   #checkov:skip=CKV2_AWS_41:This node does not call AWS APIs; attaching an IAM role would grant unnecessary permissions.
-  ami                         = "ami-0c9c942bd7bf113a2"
-  instance_type               = "t3.medium"
-  ebs_optimized               = true
-  monitoring                  = true
-  subnet_id                   = aws_subnet.public_subnet.id
-  vpc_security_group_ids      = [aws_security_group.k8s_sg.id]
+  ami                    = "ami-0c9c942bd7bf113a2"
+  instance_type          = "t3.medium"
+  ebs_optimized          = true
+  monitoring             = true
+  subnet_id              = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+
+  iam_instance_profile        = data.aws_iam_instance_profile.external_secrets.name
   key_name                    = aws_key_pair.k8s_key.key_name
   associate_public_ip_address = true
 
@@ -222,7 +223,6 @@ resource "aws_instance" "k8s_worker_2" {
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
   key_name               = aws_key_pair.k8s_key.key_name
 
-  iam_instance_profile = data.aws_iam_instance_profile.external_secrets.name
 
   root_block_device {
     encrypted = true
