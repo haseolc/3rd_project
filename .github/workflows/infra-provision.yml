@@ -387,3 +387,7 @@ jobs:
 
           echo "Temporary SSH access revoked: $RUNNER_CIDR"
           echo "Revoked SSH rule ID: $SSH_RULE_ID"
+      - name: Cleanup SSH private key
+        if: always()
+        run: |
+          rm -f ~/.ssh/k8s-key.pem

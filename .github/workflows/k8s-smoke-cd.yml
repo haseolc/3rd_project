@@ -90,3 +90,7 @@ jobs:
             kubectl get pods -n ci-cd-test -o wide &&
             kubectl get svc -n ci-cd-test
           "
+      - name: Cleanup SSH private key
+        if: always()
+        run: |
+          rm -f ~/.ssh/k8s-key.pem
