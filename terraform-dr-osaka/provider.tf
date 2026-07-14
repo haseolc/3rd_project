@@ -1,5 +1,5 @@
 terraform {
-  backend "s3" {}
+  required_version = ">= 1.5.0"
 
   required_providers {
     aws = {
@@ -10,16 +10,14 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-northeast-2"
+  region = "ap-northeast-3"
 
   default_tags {
     tags = {
+      Project     = "AIOps-FinOps"
       environment = "sandbox"
-      team        = "infra"
-      owner       = "team-2"
-      service     = "shared-network"
-      auto-stop   = "true"
-      created-by  = "terraform"
+      RegionRole  = "disaster-recovery"
+      ManagedBy   = "terraform"
     }
   }
 }

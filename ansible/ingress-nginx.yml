@@ -1,0 +1,32 @@
+---
+- name: Install NGINX Ingress Controller
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Add ingress-nginx helm repo
+      shell: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+      ignore_errors: yes
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Update helm repo
+      shell: helm repo update
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Create ingress-nginx namespace
+      shell: kubectl create namespace ingress-nginx
+      ignore_errors: yes
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Install ingress-nginx controller
+      shell: |
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          --namespace ingress-nginx \
+          --set controller.service.type=NodePort \
+          --set controller.service.nodePorts.http=30080 \
+          --set controller.service.nodePorts.https=30443
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config

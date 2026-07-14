@@ -1,0 +1,33 @@
+---
+- name: Install PostgreSQL on Kubernetes
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Add Bitnami Helm Repo
+      shell: helm repo add bitnami https://charts.bitnami.com/bitnami
+      ignore_errors: yes
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Update Helm Repo
+      shell: helm repo update
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Create Database Namespace
+      shell: kubectl create namespace database
+      ignore_errors: yes
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Install PostgreSQL
+      shell: |
+        helm upgrade --install postgresql bitnami/postgresql \
+          --namespace database \
+          --set auth.postgresPassword=postgres1234 \
+          --set auth.database=projectdb \
+          --set primary.persistence.enabled=false \
+          --set image.repository=bitnamilegacy/postgresql
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config

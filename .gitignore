@@ -1,14 +1,26 @@
-# Terraform
-.terraform/
+# Terraform State
 *.tfstate
 *.tfstate.backup
+*.tfstate.*
+*.backup
+*.tfplan
+tfplan*
+
+# Terraform Cache
+.terraform/
+
+# Terraform Backup
+terraform/backup-*/
+terraform-state-normalize-backup-*/
+
+# Vim
+*.swp
 
 # SSH
 *.pem
-id_rsa
-id_rsa.pub
+*.key
 
-# Kubernetes
+# kubeconfig
 .kube/
 kubeconfig
 

@@ -1,0 +1,31 @@
+---
+- name: Install Kafka
+  hosts: master
+  become: yes
+
+  tasks:
+    - name: Add Bitnami Helm Repo
+      shell: helm repo add bitnami https://charts.bitnami.com/bitnami
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      ignore_errors: yes
+
+    - name: Update Helm Repo
+      shell: helm repo update
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Create Kafka Namespace
+      shell: kubectl create namespace kafka
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      ignore_errors: yes
+
+    - name: Install Kafka
+      shell: |
+        helm upgrade --install kafka bitnami/kafka \
+          --namespace kafka \
+          --set kraft.enabled=true \
+          --set replicaCount=1
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
