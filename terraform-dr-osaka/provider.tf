@@ -14,10 +14,12 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "AIOps-FinOps"
-      environment = "sandbox"
-      RegionRole  = "disaster-recovery"
-      ManagedBy   = "terraform"
+      environment = "prod-dr"
+      team        = "infra"
+      service     = "shared-network"
+      owner       = "team-2"
+      auto-stop   = "false"
+      created-by  = "terraform"
     }
   }
 }

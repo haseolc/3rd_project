@@ -4,25 +4,32 @@ variable "osaka_master_ami_id" {
   default     = "ami-0ccda52359541cae5"
 }
 
+# ============================================================
+# VPC
+# 기본 태그:
+# environment = prod-dr
+# team        = infra
+# service     = shared-network
+# owner       = team-2
+# auto-stop   = false
+# created-by  = terraform
+# ============================================================
+
 resource "aws_vpc" "dr_vpc" {
   cidr_block           = "10.20.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-
-  tags = {
-    Name = "osaka-dr-vpc"
-  }
 }
+
+# ============================================================
+# Public Subnets
+# ============================================================
 
 resource "aws_subnet" "dr_public_a" {
   vpc_id                  = aws_vpc.dr_vpc.id
   cidr_block              = "10.20.1.0/24"
   availability_zone       = "ap-northeast-3a"
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "osaka-dr-public-a"
-  }
 }
 
 resource "aws_subnet" "dr_public_b" {
@@ -30,19 +37,19 @@ resource "aws_subnet" "dr_public_b" {
   cidr_block              = "10.20.2.0/24"
   availability_zone       = "ap-northeast-3b"
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "osaka-dr-public-b"
-  }
 }
+
+# ============================================================
+# Internet Gateway
+# ============================================================
 
 resource "aws_internet_gateway" "dr_igw" {
   vpc_id = aws_vpc.dr_vpc.id
-
-  tags = {
-    Name = "osaka-dr-igw"
-  }
 }
+
+# ============================================================
+# Route Table
+# ============================================================
 
 resource "aws_route_table" "dr_public_rt" {
   vpc_id = aws_vpc.dr_vpc.id
@@ -50,10 +57,6 @@ resource "aws_route_table" "dr_public_rt" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.dr_igw.id
-  }
-
-  tags = {
-    Name = "osaka-dr-public-rt"
   }
 }
 
@@ -67,10 +70,20 @@ resource "aws_route_table_association" "dr_public_b" {
   route_table_id = aws_route_table.dr_public_rt.id
 }
 
+# ============================================================
+# EC2 Key Pair
+# service = shared-network 기본 태그 사용
+# ============================================================
+
 resource "aws_key_pair" "dr_key" {
   key_name   = "k8s-dr-osaka-key"
   public_key = file("/home/ubuntu/.ssh/id_rsa.pub")
 }
+
+# ============================================================
+# Kubernetes Security Group
+# service = shared-network 기본 태그 사용
+# ============================================================
 
 resource "aws_security_group" "dr_master_sg" {
   name        = "osaka-dr-master-sg"
@@ -78,7 +91,7 @@ resource "aws_security_group" "dr_master_sg" {
   vpc_id      = aws_vpc.dr_vpc.id
 
   ingress {
-    description = "SSH"
+    description = "SSH access"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -86,7 +99,7 @@ resource "aws_security_group" "dr_master_sg" {
   }
 
   ingress {
-    description = "Kubernetes API"
+    description = "Kubernetes API inside DR VPC"
     from_port   = 6443
     to_port     = 6443
     protocol    = "tcp"
@@ -94,7 +107,7 @@ resource "aws_security_group" "dr_master_sg" {
   }
 
   ingress {
-    description = "Internal DR VPC communication"
+    description = "Internal communication inside DR VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -102,16 +115,18 @@ resource "aws_security_group" "dr_master_sg" {
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "osaka-dr-master-sg"
-  }
 }
+
+# ============================================================
+# Kubernetes Control Plane
+# EC2와 Root EBS를 user-service로 분류
+# ============================================================
 
 resource "aws_instance" "dr_master" {
   ami                         = var.osaka_master_ami_id
@@ -128,8 +143,18 @@ resource "aws_instance" "dr_master" {
   }
 
   tags = {
-    Name = "k8s-master-dr-osaka"
-    Role = "control-plane-dr"
+    Name    = "k8s-master-dr-osaka"
+    Role    = "control-plane-dr"
+    service = "user-service"
+  }
+
+  volume_tags = {
+    environment = "prod-dr"
+    team        = "infra"
+    service     = "user-service"
+    owner       = "team-2"
+    auto-stop   = "false"
+    created-by  = "terraform"
   }
 
   lifecycle {
@@ -137,21 +162,10 @@ resource "aws_instance" "dr_master" {
   }
 }
 
-output "dr_master_instance_id" {
-  value = aws_instance.dr_master.id
-}
+# ============================================================
+# Kubernetes Worker 1
+# ============================================================
 
-output "dr_master_public_ip" {
-  value = aws_instance.dr_master.public_ip
-}
-
-output "dr_master_private_ip" {
-  value = aws_instance.dr_master.private_ip
-}
-
-output "dr_vpc_id" {
-  value = aws_vpc.dr_vpc.id
-}
 resource "aws_instance" "dr_worker_1" {
   ami                         = var.osaka_master_ami_id
   instance_type               = "t3.small"
@@ -167,14 +181,28 @@ resource "aws_instance" "dr_worker_1" {
   }
 
   tags = {
-    Name = "k8s-worker-1-dr-osaka"
-    Role = "worker-dr"
+    Name    = "k8s-worker-1-dr-osaka"
+    Role    = "worker-dr"
+    service = "user-service"
+  }
+
+  volume_tags = {
+    environment = "prod-dr"
+    team        = "infra"
+    service     = "user-service"
+    owner       = "team-2"
+    auto-stop   = "false"
+    created-by  = "terraform"
   }
 
   lifecycle {
     prevent_destroy = true
   }
 }
+
+# ============================================================
+# Kubernetes Worker 2
+# ============================================================
 
 resource "aws_instance" "dr_worker_2" {
   ami                         = var.osaka_master_ami_id
@@ -191,8 +219,18 @@ resource "aws_instance" "dr_worker_2" {
   }
 
   tags = {
-    Name = "k8s-worker-2-dr-osaka"
-    Role = "worker-dr"
+    Name    = "k8s-worker-2-dr-osaka"
+    Role    = "worker-dr"
+    service = "user-service"
+  }
+
+  volume_tags = {
+    environment = "prod-dr"
+    team        = "infra"
+    service     = "user-service"
+    owner       = "team-2"
+    auto-stop   = "false"
+    created-by  = "terraform"
   }
 
   lifecycle {
@@ -200,18 +238,46 @@ resource "aws_instance" "dr_worker_2" {
   }
 }
 
+# ============================================================
+# Outputs
+# ============================================================
+
+output "dr_master_instance_id" {
+  description = "Osaka DR Kubernetes master instance ID"
+  value       = aws_instance.dr_master.id
+}
+
+output "dr_master_public_ip" {
+  description = "Osaka DR Kubernetes master public IP"
+  value       = aws_instance.dr_master.public_ip
+}
+
+output "dr_master_private_ip" {
+  description = "Osaka DR Kubernetes master private IP"
+  value       = aws_instance.dr_master.private_ip
+}
+
+output "dr_vpc_id" {
+  description = "Osaka DR VPC ID"
+  value       = aws_vpc.dr_vpc.id
+}
+
 output "dr_worker_1_public_ip" {
-  value = aws_instance.dr_worker_1.public_ip
+  description = "Osaka DR worker 1 public IP"
+  value       = aws_instance.dr_worker_1.public_ip
 }
 
 output "dr_worker_1_private_ip" {
-  value = aws_instance.dr_worker_1.private_ip
+  description = "Osaka DR worker 1 private IP"
+  value       = aws_instance.dr_worker_1.private_ip
 }
 
 output "dr_worker_2_public_ip" {
-  value = aws_instance.dr_worker_2.public_ip
+  description = "Osaka DR worker 2 public IP"
+  value       = aws_instance.dr_worker_2.public_ip
 }
 
 output "dr_worker_2_private_ip" {
-  value = aws_instance.dr_worker_2.private_ip
+  description = "Osaka DR worker 2 private IP"
+  value       = aws_instance.dr_worker_2.private_ip
 }

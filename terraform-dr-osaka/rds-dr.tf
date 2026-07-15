@@ -12,8 +12,9 @@ resource "aws_db_subnet_group" "dr_rds_subnet_group" {
   ]
 
   tags = {
-    Name       = "osaka-dr-rds-subnet-group"
-    RegionRole = "disaster-recovery"
+    Name      = "osaka-dr-rds-subnet-group"
+    service   = "db"
+    auto-stop = "false"
   }
 }
 
@@ -39,8 +40,9 @@ resource "aws_security_group" "dr_rds_sg" {
   }
 
   tags = {
-    Name       = "osaka-dr-rds-sg"
-    RegionRole = "disaster-recovery"
+    Name      = "osaka-dr-rds-sg"
+    service   = "db"
+    auto-stop = "false"
   }
 }
 
@@ -70,9 +72,9 @@ resource "aws_db_instance" "dr_postgres_replica" {
   auto_minor_version_upgrade = true
 
   tags = {
-    Name       = "project-postgres-db-osaka-dr"
-    RegionRole = "disaster-recovery"
-    Purpose    = "cross-region-read-replica"
+    Name      = "project-postgres-db-osaka-dr"
+    service   = "db"
+    auto-stop = "false"
   }
 
   lifecycle {

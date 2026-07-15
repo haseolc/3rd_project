@@ -19,9 +19,13 @@ resource "aws_security_group" "dr_alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "osaka-dr-alb-sg"
-  }
+  # provider default_tags 적용:
+  # environment = prod-dr
+  # team        = infra
+  # service     = shared-network
+  # owner       = team-2
+  # auto-stop   = false
+  # created-by  = terraform
 }
 
 resource "aws_security_group_rule" "dr_nodes_from_alb" {
@@ -46,7 +50,8 @@ resource "aws_lb" "dr_alb" {
   ]
 
   tags = {
-    Name = "osaka-dr-alb"
+    service   = "user-service"
+    auto-stop = "false"
   }
 }
 
@@ -70,7 +75,8 @@ resource "aws_lb_target_group" "dr_tg" {
   }
 
   tags = {
-    Name = "osaka-dr-tg"
+    service   = "user-service"
+    auto-stop = "false"
   }
 }
 
@@ -98,9 +104,11 @@ resource "aws_lb_listener" "dr_http" {
 }
 
 output "dr_alb_dns_name" {
-  value = aws_lb.dr_alb.dns_name
+  description = "Osaka DR ALB DNS name"
+  value       = aws_lb.dr_alb.dns_name
 }
 
 output "dr_target_group_arn" {
-  value = aws_lb_target_group.dr_tg.arn
+  description = "Osaka DR target group ARN"
+  value       = aws_lb_target_group.dr_tg.arn
 }
