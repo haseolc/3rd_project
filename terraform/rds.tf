@@ -50,12 +50,11 @@ resource "aws_db_instance" "project_db" {
   allocated_storage = 20
   storage_type      = "gp3"
 
-  db_name  = "projectdb"
-  username = "postgres"
-  password = "postgres1234"
-
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_name                     = "projectdb"
+  username                    = "postgres"
+  manage_master_user_password = true
+  db_subnet_group_name        = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids      = [aws_security_group.rds_sg.id]
 
   publicly_accessible     = false
   skip_final_snapshot     = true

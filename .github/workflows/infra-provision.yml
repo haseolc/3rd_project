@@ -132,7 +132,7 @@ jobs:
 
           INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters \
-              "Name=tag:Name,Values=k8s-master,k8s-worker-1,k8s-worker-2" \
+              "Name=tag:Name,Values=k8s-master,k8s-worker-1,k8s-worker-2,k8s-worker-3" \
               "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
@@ -173,14 +173,17 @@ jobs:
           MASTER_IP=$(get_ip "k8s-master")
           WORKER1_IP=$(get_ip "k8s-worker-1")
           WORKER2_IP=$(get_ip "k8s-worker-2")
+          WORKER3_IP=$(get_ip "k8s-worker-3")
 
           echo "MASTER_IP=$MASTER_IP" >> $GITHUB_ENV
           echo "WORKER1_IP=$WORKER1_IP" >> $GITHUB_ENV
           echo "WORKER2_IP=$WORKER2_IP" >> $GITHUB_ENV
+          echo "WORKER3_IP=$WORKER3_IP" >> $GITHUB_ENV
 
           echo "Master: $MASTER_IP"
           echo "Worker-1: $WORKER1_IP"
           echo "Worker-2: $WORKER2_IP"
+          echo "Worker-3: $WORKER3_IP"
 
       - name: Configure SSH key
         run: |
@@ -192,7 +195,7 @@ jobs:
         run: |
           set -e
 
-          for HOST in "$MASTER_IP" "$WORKER1_IP" "$WORKER2_IP"; do
+          for HOST in "$MASTER_IP" "$WORKER1_IP" "$WORKER2_IP" "$WORKER3_IP"; do
             echo "Waiting for SSH on $HOST"
 
             for i in {1..30}; do
@@ -228,6 +231,7 @@ jobs:
           [worker]
           k8s-worker-1 ansible_host=${WORKER1_IP}
           k8s-worker-2 ansible_host=${WORKER2_IP}
+          k8s-worker-3 ansible_host=${WORKER3_IP}
 
           [k8s:children]
           master
