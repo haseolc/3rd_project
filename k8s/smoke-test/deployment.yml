@@ -30,7 +30,7 @@ spec:
 
       containers:
         - name: nginx
-          image: nginxinc/nginx-unprivileged@sha256:b3f2436575bd5be7386518084d842dac414ab4962712afa31e99e0942a56e3b2
+          image: nginxinc/nginx-unprivileged@sha256:4dc2c258fcdf4a0f0ccefa6192b4fad7594b0266f9680a33e7a50f025459de0a
           imagePullPolicy: Always
 
           ports:
