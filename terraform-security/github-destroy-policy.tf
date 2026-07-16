@@ -147,6 +147,26 @@ data "aws_iam_policy_document" "github_destroy" {
   }
 
   statement {
+    sid    = "DeleteProjectRDS"
+    effect = "Allow"
+
+    actions = [
+      "rds:DeleteDBInstance",
+      "rds:DeleteDBSubnetGroup",
+      "rds:Describe*",
+      "rds:ListTagsForResource",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
     sid    = "DeleteWAFCloudWatchLogging"
     effect = "Allow"
 
