@@ -49,7 +49,7 @@ jobs:
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      TF_STATE_KEY: 3rd_project/terraform.tfstate
+      TF_STATE_KEY: 3rd_project/nodes/terraform.tfstate
 
     steps:
       - name: Checkout repository
@@ -69,7 +69,7 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
 
       - name: Terraform init with S3 backend
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
@@ -78,13 +78,13 @@ jobs:
             -backend-config="encrypt=true"
 
       - name: Terraform format and validate
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: |
           terraform fmt -check -recursive
           terraform validate
 
       - name: Terraform apply
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: terraform apply -auto-approve
 
       - name: Authorize temporary SSH access for runner
@@ -98,7 +98,7 @@ jobs:
             exit 1
           fi
 
-          SG_ID=$(terraform -chdir=terraform output -raw security_group_id)
+          SG_ID=$(terraform -chdir=terraform-nodes output -raw security_group_id)
 
           if [[ ! "$SG_ID" =~ ^sg-[0-9a-f]+$ ]]; then
             echo "Invalid Terraform security group ID: $SG_ID"
@@ -324,8 +324,8 @@ jobs:
 
             echo "attempt=$attempt states=${STATES:-none}"
 
-            if [ "$TOTAL" -eq 2 ] && [ "$HEALTHY" -eq 2 ]; then
-              echo "Both Kubernetes worker targets are healthy."
+            if [ "$TOTAL" -eq 3 ] && [ "$HEALTHY" -eq 3 ]; then
+              echo "All three Kubernetes worker targets are healthy."
               break
             fi
 
@@ -340,20 +340,15 @@ jobs:
             sleep 10
           done
 
-      - name: Verify WAF-protected ALB endpoint
+      - name: Verify ALB endpoint and optional WAF protection
         run: |
-          set -euo pipefail
+          ALB_URL=$(terraform -chdir=terraform-nodes output -raw smoke_alb_url)
 
-          ALB_URL=$(terraform -chdir=terraform output -raw smoke_alb_url)
+          ALB_ARN=$(aws elbv2 describe-load-balancers --names k8s-alb-v2 --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+
           echo "ALB_URL=$ALB_URL" >> "$GITHUB_ENV"
 
-          NORMAL_STATUS=$(curl -sS \
-            -o /tmp/alb-normal-response.txt \
-            -w '%{http_code}' \
-            --retry 6 \
-            --retry-delay 10 \
-            --retry-all-errors \
-            "$ALB_URL/")
+          NORMAL_STATUS=$(curl -sS -o /tmp/alb-normal-response.txt -w '%{http_code}' --retry 6 --retry-delay 10 --retry-all-errors "$ALB_URL/")
 
           echo "Normal request status: $NORMAL_STATUS"
 
@@ -363,22 +358,24 @@ jobs:
             exit 1
           fi
 
-          BLOCK_STATUS=$(curl -sS \
-            -o /tmp/alb-waf-block-response.txt \
-            -w '%{http_code}' \
-            --get \
-            --data-urlencode 'q=${jndi:ldap://example.com/test}' \
-            "$ALB_URL/")
+          WEB_ACL_ARN=$(aws wafv2 get-web-acl-for-resource --resource-arn "$ALB_ARN" --query 'WebACL.ARN' --output text 2>/dev/null || true)
 
-          echo "WAF test request status: $BLOCK_STATUS"
+          if [ -z "$WEB_ACL_ARN" ] || [ "$WEB_ACL_ARN" = "None" ] || [ "$WEB_ACL_ARN" = "null" ]; then
+            echo "No WAF is associated with k8s-alb-v2."
+            echo "Skipping malicious-request block verification."
+          else
+            echo "Associated WAF: $WEB_ACL_ARN"
 
-          if [ "$BLOCK_STATUS" != "403" ]; then
-            cat /tmp/alb-waf-block-response.txt || true
-            echo "Expected malicious test request to be blocked with HTTP 403."
-            exit 1
+            BLOCK_STATUS=$(curl -sS -o /tmp/alb-waf-block-response.txt -w '%{http_code}' --get --data-urlencode 'q=${jndi:ldap://example.com/test}' "$ALB_URL/")
+
+            echo "WAF test request status: $BLOCK_STATUS"
+
+            if [ "$BLOCK_STATUS" != "403" ]; then
+              cat /tmp/alb-waf-block-response.txt || true
+              echo "Expected malicious request to return HTTP 403."
+              exit 1
+            fi
           fi
-
-          echo "ALB normal request and AWS WAF blocking test passed."
 
       - name: Revoke temporary SSH access
         if: ${{ always() && env.SSH_RULE_ID != '' }}

@@ -30,6 +30,7 @@ data "aws_iam_policy_document" "github_destroy" {
 
     resources = [
       "arn:aws:s3:::sagal-3rd-project-tfstate-ap-northeast-2/3rd_project/terraform.tfstate",
+      "arn:aws:s3:::sagal-3rd-project-tfstate-ap-northeast-2/3rd_project/nodes/terraform.tfstate",
     ]
   }
 

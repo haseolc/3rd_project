@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "terraform/**"
+      - "terraform-nodes/**"
       - "terraform-security/**"
       - "ansible/**"
       - ".github/workflows/infra-ci.yml"
@@ -15,6 +16,7 @@ on:
       - main
     paths:
       - "terraform/**"
+      - "terraform-nodes/**"
       - "terraform-security/**"
       - "ansible/**"
       - ".github/workflows/infra-ci.yml"
@@ -30,6 +32,32 @@ jobs:
     defaults:
       run:
         working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init without backend
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+  terraform-nodes-validate:
+    name: Terraform Nodes Validate
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: terraform-nodes
 
     steps:
       - name: Checkout repository
