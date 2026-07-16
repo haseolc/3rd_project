@@ -37,7 +37,7 @@ jobs:
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      TF_STATE_KEY: 3rd_project/terraform.tfstate
+      TF_STATE_KEY: 3rd_project/nodes/terraform.tfstate
 
     steps:
       - name: Checkout repository
@@ -57,7 +57,7 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
 
       - name: Terraform init with S3 backend
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: |
           terraform init -reconfigure \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
@@ -66,9 +66,9 @@ jobs:
             -backend-config="encrypt=true"
 
       - name: Terraform destroy plan
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: terraform plan -destroy
 
       - name: Terraform destroy
-        working-directory: terraform
+        working-directory: terraform-nodes
         run: terraform destroy -auto-approve
