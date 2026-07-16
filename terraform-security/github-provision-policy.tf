@@ -194,6 +194,32 @@ data "aws_iam_policy_document" "github_provision" {
   }
 
   statement {
+    sid    = "ManageProjectRDS"
+    effect = "Allow"
+
+    actions = [
+      "rds:AddTagsToResource",
+      "rds:CreateDBInstance",
+      "rds:CreateDBSubnetGroup",
+      "rds:DeleteDBInstance",
+      "rds:DeleteDBSubnetGroup",
+      "rds:Describe*",
+      "rds:ListTagsForResource",
+      "rds:ModifyDBInstance",
+      "rds:ModifyDBSubnetGroup",
+      "rds:RemoveTagsFromResource",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = ["ap-northeast-2"]
+    }
+  }
+
+  statement {
     sid    = "ManageWAFCloudWatchLogging"
     effect = "Allow"
 
