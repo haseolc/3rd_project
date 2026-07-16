@@ -73,3 +73,8 @@ output "smoke_alb_url" {
   description = "Persistent Kubernetes ALB URL"
   value       = "http://${data.aws_lb.k8s.dns_name}"
 }
+
+output "k8s_target_group_arn" {
+  description = "Persistent Kubernetes ingress target group ARN"
+  value       = data.aws_lb_target_group.k8s_ingress.arn
+}

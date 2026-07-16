@@ -301,10 +301,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          TARGET_GROUP_ARN=$(aws elbv2 describe-target-groups \
-            --names 3rd-project-smoke-tg \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
+          TARGET_GROUP_ARN=$(terraform -chdir=terraform-nodes output -raw k8s_target_group_arn)
 
           if [ -z "$TARGET_GROUP_ARN" ] || [ "$TARGET_GROUP_ARN" = "None" ]; then
             echo "Target Group ARN not found."
