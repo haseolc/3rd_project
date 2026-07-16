@@ -1,0 +1,5 @@
+OmniAnomaly/
+.env
+k8s-key.pem
+__pycache__/
+models/
