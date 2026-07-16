@@ -64,6 +64,7 @@ output "k8s_public_ips" {
     master   = aws_instance.k8s_master.public_ip
     worker_1 = aws_instance.k8s_worker_1.public_ip
     worker_2 = aws_instance.k8s_worker_2.public_ip
+    worker_3 = aws_instance.k8s_worker_3.public_ip
   }
 }
 
@@ -73,6 +74,7 @@ output "k8s_private_ips" {
     master   = aws_instance.k8s_master.private_ip
     worker_1 = aws_instance.k8s_worker_1.private_ip
     worker_2 = aws_instance.k8s_worker_2.private_ip
+    worker_3 = aws_instance.k8s_worker_3.private_ip
   }
 }
 
@@ -99,4 +101,19 @@ output "smoke_alb_url" {
 output "smoke_waf_arn" {
   description = "ARN of the regional AWS WAF Web ACL"
   value       = aws_wafv2_web_acl.smoke.arn
+}
+
+output "worker_3_instance_id" {
+  description = "Kubernetes worker-3 EC2 instance ID"
+  value       = aws_instance.k8s_worker_3.id
+}
+
+output "worker_3_public_ip" {
+  description = "Kubernetes worker-3 public IP"
+  value       = aws_instance.k8s_worker_3.public_ip
+}
+
+output "worker_3_private_ip" {
+  description = "Kubernetes worker-3 private IP"
+  value       = aws_instance.k8s_worker_3.private_ip
 }
