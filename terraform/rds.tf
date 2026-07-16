@@ -2,8 +2,8 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
   name = "project-rds-subnet-group"
 
   subnet_ids = [
-    "subnet-0e79d7a2dee8ec9f3", # ap-northeast-2a
-    "subnet-0faf6bea039c8f143"  # ap-northeast-2b
+    aws_subnet.public_subnet.id,
+    aws_subnet.public_subnet_b.id,
   ]
 
   tags = {
@@ -17,8 +17,7 @@ resource "aws_security_group" "rds_sg" {
   name        = "rds-sg"
   description = "Security group for PostgreSQL RDS"
 
-  # 실제 운영 VPC
-  vpc_id = "vpc-09b2f47da0466ba08"
+  vpc_id = aws_vpc.main_vpc.id
 
   ingress {
     from_port   = 5432
@@ -41,6 +40,7 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
+#checkov:skip=CKV_AWS_293:Sandbox infrastructure must support the controlled manual destroy workflow.
 resource "aws_db_instance" "project_db" {
   identifier     = "project-postgres-db"
   engine         = "postgres"
@@ -56,9 +56,10 @@ resource "aws_db_instance" "project_db" {
   db_subnet_group_name        = aws_db_subnet_group.rds_subnet_group.name
   vpc_security_group_ids      = [aws_security_group.rds_sg.id]
 
-  publicly_accessible     = false
-  skip_final_snapshot     = true
-  deletion_protection     = true
+  publicly_accessible = false
+  skip_final_snapshot = true
+  # Sandbox infrastructure must support the manual destroy workflow.
+  deletion_protection     = false
   backup_retention_period = 7
   copy_tags_to_snapshot   = true
 

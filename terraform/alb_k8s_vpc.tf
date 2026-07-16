@@ -1,22 +1,14 @@
 # ============================================================
-# Existing Kubernetes VPC resources
+# Terraform-managed Kubernetes VPC resources
 # ============================================================
 
-data "aws_vpc" "k8s_existing_vpc" {
-  id = "vpc-09b2f47da0466ba08"
-}
 
-data "aws_subnet" "k8s_public_subnet_a" {
-  id = "subnet-0e79d7a2dee8ec9f3"
-}
 
-data "aws_subnet" "k8s_public_subnet_b" {
-  id = "subnet-0faf6bea039c8f143"
-}
 
-data "aws_security_group" "k8s_node_sg" {
-  id = "sg-02cfb946649a50d91"
-}
+
+
+
+
 
 # ============================================================
 # ALB Security Group
@@ -25,7 +17,7 @@ data "aws_security_group" "k8s_node_sg" {
 resource "aws_security_group" "k8s_alb_v2_sg" {
   name        = "k8s-alb-v2-sg"
   description = "Security group for Kubernetes ALB in existing cluster VPC"
-  vpc_id      = data.aws_vpc.k8s_existing_vpc.id
+  vpc_id      = aws_vpc.main_vpc.id
 
   ingress {
     description = "HTTP access to ALB"
@@ -40,7 +32,7 @@ resource "aws_security_group" "k8s_alb_v2_sg" {
     from_port       = 30080
     to_port         = 30080
     protocol        = "tcp"
-    security_groups = [data.aws_security_group.k8s_node_sg.id]
+    security_groups = [aws_security_group.k8s_sg.id]
   }
 
   tags = {
@@ -59,7 +51,7 @@ resource "aws_security_group_rule" "k8s_nodes_from_alb_v2" {
   from_port                = 30080
   to_port                  = 30080
   protocol                 = "tcp"
-  security_group_id        = data.aws_security_group.k8s_node_sg.id
+  security_group_id        = aws_security_group.k8s_sg.id
   source_security_group_id = aws_security_group.k8s_alb_v2_sg.id
 }
 
@@ -77,8 +69,8 @@ resource "aws_lb" "k8s_alb_v2" {
   ]
 
   subnets = [
-    data.aws_subnet.k8s_public_subnet_a.id,
-    data.aws_subnet.k8s_public_subnet_b.id
+    aws_subnet.public_subnet.id,
+    aws_subnet.public_subnet_b.id
   ]
 
   tags = {
@@ -98,7 +90,7 @@ resource "aws_lb_target_group" "k8s_ingress_tg_v2" {
   name        = "k8s-ingress-tg-v2"
   port        = 30080
   protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.k8s_existing_vpc.id
+  vpc_id      = aws_vpc.main_vpc.id
   target_type = "instance"
 
   health_check {
@@ -143,19 +135,19 @@ resource "aws_lb_listener" "k8s_http_listener_v2" {
 
 resource "aws_lb_target_group_attachment" "k8s_worker_1_v2" {
   target_group_arn = aws_lb_target_group.k8s_ingress_tg_v2.arn
-  target_id        = data.aws_instance.existing_worker_1.id
+  target_id        = aws_instance.k8s_worker_1.id
   port             = 30080
 }
 
 resource "aws_lb_target_group_attachment" "k8s_worker_2_v2" {
   target_group_arn = aws_lb_target_group.k8s_ingress_tg_v2.arn
-  target_id        = data.aws_instance.existing_worker_2.id
+  target_id        = aws_instance.k8s_worker_2.id
   port             = 30080
 }
 
 resource "aws_lb_target_group_attachment" "k8s_worker_3_v2" {
   target_group_arn = aws_lb_target_group.k8s_ingress_tg_v2.arn
-  target_id        = data.aws_instance.existing_worker_3.id
+  target_id        = aws_instance.k8s_worker_3.id
   port             = 30080
 }
 
@@ -171,16 +163,4 @@ output "k8s_alb_v2_dns_name" {
 output "k8s_target_group_v2_arn" {
   description = "ARN of the Kubernetes v2 target group"
   value       = aws_lb_target_group.k8s_ingress_tg_v2.arn
-}
-
-data "aws_instance" "existing_worker_1" {
-  instance_id = "i-0ef2863c4d145c5a2"
-}
-
-data "aws_instance" "existing_worker_2" {
-  instance_id = "i-0d58c354bd2948d09"
-}
-
-data "aws_instance" "existing_worker_3" {
-  instance_id = "i-0e761d6fe7db810ed"
 }

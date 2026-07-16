@@ -17,16 +17,7 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
-resource "aws_subnet" "public_subnet_2" {
-  vpc_id                  = aws_vpc.main_vpc.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "ap-northeast-2c"
-  map_public_ip_on_launch = true
 
-  tags = {
-    Name = "public-subnet-2"
-  }
-}
 
 resource "aws_security_group" "k8s_sg" {
   name        = "k8s-sg"
@@ -190,10 +181,7 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_route_table_association" "public_assoc_2" {
-  subnet_id      = aws_subnet.public_subnet_2.id
-  route_table_id = aws_route_table.public_rt.id
-}
+
 
 
 
@@ -259,6 +247,40 @@ resource "aws_instance" "k8s_worker_2" {
 
   tags = {
     Name       = "k8s-worker-2"
+    service    = "user-service"
+    team       = "infra"
+    owner      = "team-leader"
+    auto-stop  = "true"
+    created-by = "terraform"
+  }
+}
+
+resource "aws_instance" "k8s_worker_3" {
+  #checkov:skip=CKV_AWS_88:Public IP is temporarily required for GitHub-hosted runner SSH; port 22 is limited to the runner IP /32 and revoked after the workflow.
+  #checkov:skip=CKV2_AWS_41:This node does not call AWS APIs; attaching an IAM role would grant unnecessary permissions.
+  ami                    = "ami-0c9c942bd7bf113a2"
+  instance_type          = "t3.small"
+  ebs_optimized          = true
+  monitoring             = true
+  subnet_id              = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+  key_name               = aws_key_pair.k8s_key.key_name
+
+  associate_public_ip_address = true
+
+  root_block_device {
+    encrypted = true
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+    instance_metadata_tags      = "disabled"
+  }
+
+  tags = {
+    Name       = "k8s-worker-3"
     service    = "user-service"
     team       = "infra"
     owner      = "team-leader"
