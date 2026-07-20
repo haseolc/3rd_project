@@ -1,0 +1,9 @@
+boto3
+requests
+numpy
+scikit-learn
+prophet
+pandas
+python-dotenv
+joblib
+kafka-python
