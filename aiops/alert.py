@@ -1,22 +1,15 @@
 # alert.py
 # Discord Webhook 알림 전송
-# 채널 구조:
-#   AIOps 이상   → 인프라 채널
-#   FinOps 이상  → FinOps 채널
-#   통합 이상    → 인프라 채널 + FinOps 채널 동시 전송
 
 import os
 import time
 import requests
 from dotenv import load_dotenv
 
+# .env 파일 로드
 load_dotenv()
 
-# ----------------------------------------
-# TODO: .env 파일에 아래 항목 추가 필요
-#   DISCORD_WEBHOOK_INFRA=https://discord.com/api/webhooks/인프라_채널_URL
-#   DISCORD_WEBHOOK_FINOPS=https://discord.com/api/webhooks/FinOps_채널_URL
-# ----------------------------------------
+# .env 변수명과 100% 일치
 WEBHOOK_INFRA  = os.environ.get("DISCORD_WEBHOOK_INFRA")
 WEBHOOK_FINOPS = os.environ.get("DISCORD_WEBHOOK_FINOPS")
 MAX_LENGTH = 1900
@@ -56,7 +49,7 @@ def send_alert(message: str) -> bool:
     """
     AIOps 이상 알람 → 인프라 채널만 전송
     """
-    content = f"🚨 AIOps Alert\n{message}"
+    content = f"🚨 **[AIOps Alert]**\n{message}"
     print("📨 인프라 채널 전송 중...")
     result = _send(WEBHOOK_INFRA, content)
     if result:
@@ -68,7 +61,7 @@ def send_recovery_alert(message: str) -> bool:
     """
     AIOps 복구 완료 알람 → 인프라 채널 전송
     """
-    content = f"🟢 AIOps Recovery Resolved\n{message}"
+    content = f"🟢 **[AIOps Recovery Resolved]**\n{message}"
     print("📨 인프라 복구 알림 전송 중...")
     result = _send(WEBHOOK_INFRA, content)
     if result:
@@ -80,7 +73,7 @@ def send_cost_alert(message: str) -> bool:
     """
     FinOps 비용 이상 알람 → FinOps 채널만 전송
     """
-    content = f"💰 FinOps Alert\n{message}"
+    content = f"💰 **[FinOps Alert]**\n{message}"
     print("📨 FinOps 채널 전송 중...")
     result = _send(WEBHOOK_FINOPS, content)
     if result:
@@ -92,7 +85,7 @@ def send_cost_recovery_alert(message: str) -> bool:
     """
     FinOps 비용 복구 완료 알람 → FinOps 채널 전송
     """
-    content = f"🟢 FinOps Recovery Resolved\n{message}"
+    content = f"🟢 **[FinOps Recovery Resolved]**\n{message}"
     print("📨 FinOps 복구 알림 전송 중...")
     result = _send(WEBHOOK_FINOPS, content)
     if result:
@@ -105,7 +98,7 @@ def send_integrated_alert(message: str) -> bool:
     AIOps + FinOps 동시 이상 알람
     → 인프라 채널 + FinOps 채널 동시 전송
     """
-    content = f"⚡ Integrated Alert\n{message}"
+    content = f"⚡ **[Integrated Alert]**\n{message}"
     print("📨 통합 알림 전송 중 (인프라 + FinOps)...")
     r1 = _send(WEBHOOK_INFRA, content)
     r2 = _send(WEBHOOK_FINOPS, content)

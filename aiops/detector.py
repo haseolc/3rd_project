@@ -14,7 +14,7 @@ from sklearn.ensemble import IsolationForest
 class RealTimeAnomalyDetector:
     def __init__(self, window_size=10, threshold=2):
         """
-        window_size : 최근 몇 개 데이터를 기준으로 판단할지
+        window_size : 최근 몇 개 데이터를 기준으로 판단할지 (테스트용 10)
         threshold   : Z-score 임계값 (낮을수록 민감, 보통 2~3)
         """
         self.window = deque(maxlen=window_size)
@@ -64,13 +64,12 @@ class RealTimeAnomalyDetector:
 # 비정상 패턴 탐지에 강함 - Z-score 보완용
 # ============================================================
 class IsolationForestDetector:
-    def __init__(self, n_estimators=100, contamination=0.05, min_samples=50):
+    # 💡 min_samples 기본값을 50에서 10으로 축소 수정!
+    def __init__(self, n_estimators=100, contamination=0.05, min_samples=10):
         """
         n_estimators  : 트리 개수 (많을수록 정확, 느림 / 기본 100)
         contamination : 이상 데이터 비율 예상치 (기본 5%)
-                        TODO: 실제 운영 데이터 확인 후 조정
-                        예) 평소 이상 발생이 드물면 0.01 (1%)
-        min_samples   : 모델 학습에 필요한 최소 데이터 수
+        min_samples   : 모델 학습에 필요한 최소 데이터 수 (테스트용 10개로 변경)
         """
         self.model = IsolationForest(
             n_estimators=n_estimators,
@@ -99,7 +98,7 @@ class IsolationForestDetector:
             print(f"✅ IsolationForest 학습 완료 ({len(self.buffer)}개 데이터)")
 
         if not self.is_trained:
-            print(f"📊 IsolationForest 학습 중... ({len(self.buffer)}/{self.min_samples})")
+            print(f"🌲 IsolationForest 학습 중... ({len(self.buffer)}/{self.min_samples})")
             return None
 
         # 예측 (-1: 이상, 1: 정상)
@@ -118,8 +117,6 @@ class IsolationForestDetector:
     def retrain(self):
         """
         새로운 데이터가 충분히 쌓이면 모델 재학습
-        TODO: 운영 중 주기적 재학습 주기 결정 필요
-              예) 매일 자정 재학습, 또는 데이터 1000개마다 재학습
         """
         if len(self.buffer) >= self.min_samples:
             X = np.array(self.buffer).reshape(-1, 1)
@@ -129,7 +126,6 @@ class IsolationForestDetector:
     def save(self, path: str):
         """
         학습된 모델을 파일로 저장
-        pretrain.py에서 학습 후 저장할 때 사용
         """
         os.makedirs(os.path.dirname(path), exist_ok=True)
         joblib.dump(self.model, path)
@@ -138,7 +134,6 @@ class IsolationForestDetector:
     def load(self, path: str):
         """
         저장된 모델 불러오기
-        main.py 시작 시 사전 학습 모델을 불러올 때 사용
         """
         if not os.path.exists(path):
             print(f"⚠️ 저장된 모델 없음: {path} → 실시간 학습으로 대체")
