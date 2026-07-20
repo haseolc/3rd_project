@@ -220,7 +220,6 @@ Route 53 Failover Traffic 전환
 
 # 2. 아키텍처 다이어그램
 
-<img width="2398" height="1014" alt="image" src="https://github.com/user-attachments/assets/14e563c4-da66-49e4-a02d-d5ee27e24d6f" />
 <img width="13524" height="5692" alt="image" src="https://github.com/user-attachments/assets/c08fe1a7-54e6-4f3a-a6e2-a500c6a88b03" />
 
 
